@@ -15,28 +15,28 @@ One advantage of accelerometer data is the ability to inspect activity over the 
 library(tidyverse)
 library(readr)
 library(wordcountaddin)
+library(ggridges)
 wordcountaddin::text_stats("p8105_mtp_zdz2101.Rmd")
 ```
 
 ```{r Reading in data and tidying}
 accelero_data <- read_csv("data/p8105_mtp_data.csv") %>%
-  gather(., key = "minute", value = "activity_value", 3:1442) %>%
+  gather(., key = "activity", value = "activity_value", 3:1442) %>%
   mutate(day = factor(day, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
          day_id = (7 * week) - (abs(as.numeric(day) - 7)),
-         minute = as.numeric(str_replace_all(minute, "activity.",""))) %>%
-  mutate(hour = floor((as.numeric(minute)-1)/60),
-         ) %>% 
-  select(day_id, week, day, hour, minute, activity_value) %>%
+         minute = as.numeric(str_replace_all(activity, "activity.",""))) %>%
+  mutate(hour = floor((as.numeric(minute)-1)/60)) %>% 
   arrange(week,day)
 
-#473760 x 6: day_id, week, day, hour, minute, the activity value
+#473760 x 7: day_id, week, day, hour, minute, the activity value
 #Created day_id using clever math so that I can track the "day since start of study, sunday week 1 is day 1, sunday week 2 would be day 8, sunday week 3 would be day 15, etc."
 ```
 
 ```{r Aggregate by day}
 day_aggregate <- accelero_data %>%
   group_by(day_id, week, day) %>%
-  summarize(mean = mean(activity_value),
+  summarize(total_activity = sum(activity_value),
+            mean = mean(activity_value),
             sd = sd(activity_value),
             min = quantile(activity_value, 0),
             q1 = quantile(activity_value, 0.25),
@@ -45,7 +45,7 @@ day_aggregate <- accelero_data %>%
             max = quantile(activity_value, 1)
             )
 
-ggplot(day_aggregate, aes(x = day_id, y = mean)) + 
+ggplot(day_aggregate, aes(x = day_id, y = total_activity)) + 
   geom_point(aes(color = day), alpha = 0.5) + 
   geom_smooth()
 ```
@@ -53,8 +53,12 @@ ggplot(day_aggregate, aes(x = day_id, y = mean)) +
 ```{r}
 hour_aggregate <- accelero_data %>%
   group_by(day_id, week, day, hour) %>%
-  summarize(min = min(activity_value))
+  summarize(hourly_activity_total = sum(activity_value),
+            hourly_activity_mean = mean(activity_value))
 
-ggplot(hour_aggregate, aes(x = hour, y = min)) +
-  geom_point(alpha = 0.5)
+ggplot(hour_aggregate, aes(x = as.factor(hour), y = hourly_activity_total)) +
+  geom_boxplot()
+
+ggplot(hour_aggregate, aes(y = as.factor(hour), x = hourly_activity_total)) +
+  geom_density_ridges()
 ```
