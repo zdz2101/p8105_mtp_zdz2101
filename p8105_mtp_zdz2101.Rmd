@@ -16,6 +16,7 @@ library(tidyverse)
 library(readr)
 library(wordcountaddin)
 library(ggridges)
+library(ggpubr)
 wordcountaddin::text_stats("p8105_mtp_zdz2101.Rmd")
 ```
 
@@ -25,40 +26,75 @@ accelero_data <- read_csv("data/p8105_mtp_data.csv") %>%
   mutate(day = factor(day, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
          day_id = (7 * week) - (abs(as.numeric(day) - 7)),
          minute = as.numeric(str_replace_all(activity, "activity.",""))) %>%
-  mutate(hour = floor((as.numeric(minute)-1)/60)) %>% 
+  mutate(hour = floor((minute-1)/60)) %>% 
   arrange(week,day)
 
 #473760 x 7: day_id, week, day, hour, minute, the activity value
 #Created day_id using clever math so that I can track the "day since start of study, sunday week 1 is day 1, sunday week 2 would be day 8, sunday week 3 would be day 15, etc."
 ```
 
-```{r Aggregate by day}
+```{r Aggregate by day, fig.height = 8, fig.width = 12}
 day_aggregate <- accelero_data %>%
   group_by(day_id, week, day) %>%
   summarize(total_activity = sum(activity_value),
             mean = mean(activity_value),
-            sd = sd(activity_value),
             min = quantile(activity_value, 0),
             q1 = quantile(activity_value, 0.25),
             median = quantile(activity_value, 0.50),
             q3 = quantile(activity_value, 0.75),
             max = quantile(activity_value, 1)
-            )
+            ) %>%
+  filter(total_activity != 1440) #get rid of days we don't have any readings
 
 ggplot(day_aggregate, aes(x = day_id, y = total_activity)) + 
   geom_point(aes(color = day), alpha = 0.5) + 
-  geom_smooth()
+  geom_smooth() 
+
+ggplot(day_aggregate, aes(x = day_id, y = total_activity, color = day)) + 
+  geom_point(alpha = 0.5) + 
+  geom_smooth() + 
+  facet_grid(~day)
+
+#Yes there is upward trend overall (by total activity), also seen if you facet by day (saturday is the weirdest)
 ```
 
-```{r}
+```{r Aggregate by hour/"activity profiles"}
 hour_aggregate <- accelero_data %>%
   group_by(day_id, week, day, hour) %>%
   summarize(hourly_activity_total = sum(activity_value),
-            hourly_activity_mean = mean(activity_value))
+            hourly_activity_mean = mean(activity_value)) %>%
+  mutate(sleep = ifelse(hour %in% c(0:6,23), "asleep", "awake")) #assuming 8 hours of sleep, 8 lowest median hours, eyeballed it
 
-ggplot(hour_aggregate, aes(x = as.factor(hour), y = hourly_activity_total)) +
+ggplot(hour_aggregate, aes(x = as.factor(hour), y = hourly_activity_total, color = sleep)) +
   geom_boxplot()
 
-ggplot(hour_aggregate, aes(y = as.factor(hour), x = hourly_activity_total)) +
-  geom_density_ridges()
+#looks like he gets up around 7/8, goes to bed around 10
+```
+
+```{r Finding peak times}
+top_one_percent <- quantile(accelero_data$activity_value, 0.99)
+
+peaks_df<- accelero_data %>%
+  filter(activity_value > top_one_percent) %>%
+  select(day_id, hour, minute, activity_value) %>%
+  group_by(day_id) %>%
+  arrange(day_id, minute)
+
+ggplot(peaks_df, aes(x = minute, y = activity_value, color = as.factor(day_id))) +
+  geom_line() + 
+  scale_x_continuous(breaks = seq(1,1440,60), labels = 0:23) + 
+  xlab("hour of day") +
+  geom_hline(yintercept =  2500, color = "black", linetype = "dashed") +
+  theme(legend.position="none")
+#still appears to be some noise "below 2500", looks like workout times are above this line
+
+exercise_df <- peaks_df %>%
+  filter(activity_value > 2500) %>%
+  mutate(study = ifelse(day_id >= 116, "Second Half", "First Half"))
+
+ggplot(exercise_df, aes(x = minute, y = activity_value, color = study)) + 
+  geom_jitter(alpha = 0.5) + 
+  scale_x_continuous(breaks = seq(1,1440,60), labels = 0:23) + 
+  xlab("hour of day") +
+  facet_grid(~study)
 ```
