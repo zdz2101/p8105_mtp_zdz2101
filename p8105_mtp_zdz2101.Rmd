@@ -5,26 +5,56 @@ date: "10/22/2018"
 output: github_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+First, load, tidy, and otherwise wrangle the data. Your final dataset should include all originally observed variables and values; have useful variable names; and code data with reasonable variable classes. Describe the resulting dataset (e.g. what variables exist, how many observations, etc). Discuss any additional exploratory analyses you conduct, but only include results you think are interesting (e.g. visually inspect distributions for outliers, but include only if these are informative).
+
+Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable. Using these data, explore the hypothesis that this participant became more active over time. You may want to want to make comparisons visually and / or quantitatively, or using formal statistical analyses. Additionally, examine the possibility that day of the week affects activity (in isolation and in addition to the effect of time).
+
+One advantage of accelerometer data is the ability to inspect activity over the course of the day, rather than aggregating over 24 hours. Explore the distribution of activity counts in the full dataset, taking into account other variables of interest. Make a visualization that shows the 24-hour activity “profiles” for each day. Also visualize effects of time and day of the week on 24-hour activity profiles; incorporating smooth estimates of mean activity profiles may clarify these effects. Comment on relationships you think are interesting. (No formal statistical analyses are needed.)
+
+```{r Load Libraries}
+library(tidyverse)
+library(readr)
+library(wordcountaddin)
+wordcountaddin::text_stats("p8105_mtp_zdz2101.Rmd")
 ```
 
-## R Markdown
+```{r Reading in data and tidying}
+accelero_data <- read_csv("data/p8105_mtp_data.csv") %>%
+  gather(., key = "minute", value = "activity_value", 3:1442) %>%
+  mutate(day = factor(day, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
+         day_id = (7 * week) - (abs(as.numeric(day) - 7)),
+         minute = as.numeric(str_replace_all(minute, "activity.",""))) %>%
+  mutate(hour = floor((as.numeric(minute)-1)/60),
+         ) %>% 
+  select(day_id, week, day, hour, minute, activity_value) %>%
+  arrange(week,day)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+#473760 x 6: day_id, week, day, hour, minute, the activity value
+#Created day_id using clever math so that I can track the "day since start of study, sunday week 1 is day 1, sunday week 2 would be day 8, sunday week 3 would be day 15, etc."
 ```
 
-## Including Plots
+```{r Aggregate by day}
+day_aggregate <- accelero_data %>%
+  group_by(day_id, week, day) %>%
+  summarize(mean = mean(activity_value),
+            sd = sd(activity_value),
+            min = quantile(activity_value, 0),
+            q1 = quantile(activity_value, 0.25),
+            median = quantile(activity_value, 0.50),
+            q3 = quantile(activity_value, 0.75),
+            max = quantile(activity_value, 1)
+            )
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+ggplot(day_aggregate, aes(x = day_id, y = mean)) + 
+  geom_point(aes(color = day), alpha = 0.5) + 
+  geom_smooth()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+hour_aggregate <- accelero_data %>%
+  group_by(day_id, week, day, hour) %>%
+  summarize(min = min(activity_value))
+
+ggplot(hour_aggregate, aes(x = hour, y = min)) +
+  geom_point(alpha = 0.5)
+```
