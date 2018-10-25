@@ -87,7 +87,7 @@ by_day_plot <- day_aggregate_df %>%
 day_aggregate_plot + by_day_plot
 ```
 
-Plotting total activity by day, as shown on the left, we see an upward trend in activity throughout the course of the study. It dips around day 150, but the trend overall throughout 47 weeks is still positive. Based on the figure on the right, the patient's activity still increases over time regardless of what day it is signifying weekday does not play a role in our findings. It could be argued the patient's activity on Thursdays looks stagnant. 
+Plotting total activity by day, as shown on the left, we see an upward trend in activity throughout the course of the study. It dips around day 150, but the trend overall throughout 47 weeks is still positive. Based on the figure on the right, the patient's activity still increases over time regardless of what day it is suggesting weekday does not play a role in our findings. It could be argued the patient's activity on Thursdays looks stagnant. 
 
 I discovered 18 days: day_id's `r day_aggregate_df$day_id[which(day_aggregate_df$total_activity == 1440)]` where total activity is "1440" meaning there was no activity over the entirety of those days. I suspect the patient was not wearing the accelerometer or accelerometer malfunction, so I excluded these days from the figures.
 
@@ -145,7 +145,7 @@ exercise_hyp_plot <- ggplot(exercise_df, aes(x = minute, y = activity_value, col
   geom_jitter(alpha = 0.5) + 
   scale_x_continuous(breaks = seq(1,1440,60), labels = 0:23) + 
   xlab("Hour of Day") +
-  ylab("Activity Level") + 
+  ylab("Activity Value") + 
   ggtitle("Scatter plot of top readings based on two periods") +
   theme(axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
