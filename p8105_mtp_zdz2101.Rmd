@@ -123,7 +123,7 @@ hourly_profiles_by_day <- ggplot(hour_aggregate, aes(x = as.factor(hour), y = ho
 hourly_profiles/hourly_profiles_by_day
 ```
 
-It seems logical to get a sense of when our patient is awake and doing things. Assuming 8 hours of sleep, I made the 8 hours with the lowest median total activity readings a different color to signify "asleep" hours. In general, he starts his day around 7-8am, ramps up activity which stabilizes from 10am until 8pm, then "winds down" his day and probably asleep by 11pm-12am. This routine does not seem to change too much by day of the week either though he has some instances on Friday nights and Sunday afternoons where he is clocking in some high activity. 
+It seems logical to get a sense of when our patient is awake and doing things. Assuming 8 hours of sleep, I made the 8 hours with the lowest median total activity readings a different color to signify "asleep" hours. In general, he starts his day around 7-8am, ramps up activity which stabilizes from 10am until 8pm, then "winds down" his day and probably asleep by 11pm-12am. This routine does not seem to change too much by day of the week either though there is a handful of Friday nights and Sunday afternoons where he is clocking in some high activity. 
 
 #Additional Exploratory Stuff
 ```{r Finding peak times, fig.height = 18, fig.width = 16}
