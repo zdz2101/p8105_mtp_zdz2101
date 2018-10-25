@@ -11,7 +11,7 @@ Traditional analyses of accelerometer data focus on the total activity over the 
 
 One advantage of accelerometer data is the ability to inspect activity over the course of the day, rather than aggregating over 24 hours. Explore the distribution of activity counts in the full dataset, taking into account other variables of interest. Make a visualization that shows the 24-hour activity “profiles” for each day. Also visualize effects of time and day of the week on 24-hour activity profiles; incorporating smooth estimates of mean activity profiles may clarify these effects. Comment on relationships you think are interesting. (No formal statistical analyses are needed.)
 
-```{r Load Libraries}
+```{r Load Libraries, messages = FALSE}
 library(tidyverse)
 library(readr)
 library(wordcountaddin)
@@ -27,11 +27,22 @@ accelero_data <- read_csv("data/p8105_mtp_data.csv") %>%
          day_id = (7 * week) - (abs(as.numeric(day) - 7)),
          minute = as.numeric(str_replace_all(activity, "activity.",""))) %>%
   mutate(hour = floor((minute-1)/60)) %>% 
+  select(day_id, week, day, hour, activity, minute, activity_value) %>%
   arrange(week,day)
 
-#473760 x 7: day_id, week, day, hour, minute, the activity value
-#Created day_id using clever math so that I can track the "day since start of study, sunday week 1 is day 1, sunday week 2 would be day 8, sunday week 3 would be day 15, etc."
+accelero_data
+#used clever trick for to figure out day_id (a linear transform of week and day)
 ```
+
+The final dataset I have attained has `r nrow(accelero_data)` observations and `r ncol(accelero_data)` variables. The number of observations was as expected as there are 60 minutes in an hour, 24 hours a day, 7 days a week, and 47 weeks worth of accelerometer readings, in which case the product of these 4 numbers gets you `r nrow(accelero_data)`. My variables are as follows: 
+
+1) **day_id**: Identifies the day of the study with the assumption that sunday is the beginning of a week, so week 1 sunday is day 1, week 2 sunday is day 8, etc. 
+2) **week**: Identifies what week of the study this patient was wearing the accelerometer
+3) **day**: Identifies what weekday it is, which I recoded to as a factor
+4) **hour**: Identifies what hour of the day it is (24 hour/military time)
+5) **activity**: A column of essentially the column names of the original file, this was my "key" for when using the gather function, I left it as is to "preserve the original observations"
+6) **minute**: Identifies minute of day 1 being 12:00 - 12:01 AM,  1440 being 11:59 PM - 12:00 AM
+7) **activity_value**: The accelerometer activity reading for a particular moment in time
 
 ```{r Aggregate by day, fig.height = 8, fig.width = 12}
 day_aggregate <- accelero_data %>%
