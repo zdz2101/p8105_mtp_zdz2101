@@ -54,6 +54,8 @@ day_aggregate_df <- accelero_data %>%
             max = quantile(activity_value, 1)
             )
   
+unreasonable_days <- day_aggregate_df$day_id[which(day_aggregate_df$total_activity == 1440)]
+
 day_aggregate_plot <- day_aggregate_df %>%
   filter(total_activity != 1440) %>% #---------remove days w/ invalid readings
   ggplot(., aes(x = day_id, y = total_activity)) + 
@@ -89,11 +91,12 @@ day_aggregate_plot + by_day_plot
 
 Plotting total activity by day, as shown on the left, we see an upward trend in activity throughout the course of the study. It dips around day 150, but the trend overall throughout 47 weeks is still positive. Based on the figure on the right, the patient's activity still increases over time regardless of what day it is suggesting weekday does not play a role in our findings. It could be argued the patient's activity on Thursdays looks stagnant. 
 
-I discovered 18 days: day_id's `r day_aggregate_df$day_id[which(day_aggregate_df$total_activity == 1440)]` where total activity is "1440" meaning there was no activity over the entirety of those days. I suspect the patient was not wearing the accelerometer or accelerometer malfunction, so I excluded these days from the figures.
+I discovered 18 days: day_id's `r unreasonable_days` where total activity is "1440" meaning there was no activity over the entirety of those days. I suspect the patient was not wearing the accelerometer or accelerometer malfunction, so I excluded these days from figures.
 
 #Aggregate by hour/24 hour profiles
 ```{r Aggregate by hour/"activity profiles", fig.height = 16, fig.width = 20}
 hour_aggregate <- accelero_data %>%
+  filter(!day_id %in% unreasonable_days) %>%
   group_by(day_id, week, day, hour) %>%
   summarize(hourly_activity_total = sum(activity_value),
             hourly_activity_mean = mean(activity_value)) %>%
