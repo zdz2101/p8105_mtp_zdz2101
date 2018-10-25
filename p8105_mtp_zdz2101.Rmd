@@ -19,13 +19,16 @@ wordcountaddin::text_stats("p8105_mtp_zdz2101.Rmd")
 accelero_data <- read_csv("data/p8105_mtp_data.csv") %>%
   gather(., key = "activity", value = "activity_value", 3:1442) %>%
   mutate(day = factor(day, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
-         day_id = (7 * week) - (abs(as.numeric(day) - 7)),
+         day_id = (7 * week) - (7 - as.numeric(day)),
          minute = as.numeric(str_replace_all(activity, "activity.","")),
-         hour = floor((minute-1)/60)) %>%
+         hour = floor((minute - 1)/60)) %>%
   select(day_id, week, day, hour, activity, minute, activity_value) %>%
   arrange(week,day)
 
-sample_n(accelero_data, 10)
+sample_n(accelero_data, 10) #show day_id works
+
+#day_id is just a linear transform of week and day, took some thought
+#hour is made by minute: 1-60 are midnight, 61-120 are 1am, etc. I used another clever trick to transform hour to be 0-23
 ```
 
 This dataset has `r nrow(accelero_data)` observations and `r ncol(accelero_data)` variables. The number of observations is expected as there is 1 reading/minute, 60 minutes/hour, 24 hours/day, 7 days/week, and 47 weeks worth of accelerometer readings (product of these 4 numbers gets you `r nrow(accelero_data)`). Variables are: 
@@ -134,7 +137,7 @@ exercise_df <- peaks_df %>%
   filter(activity_value > 2500) %>%
   mutate(study = ifelse(day_id > 165, "Second Half", "First Half"))
 
-study_half_props <- exercise_df %>%
+study_half_counts <- exercise_df %>%
   group_by(study) %>%
   count()
 
@@ -155,4 +158,4 @@ peak_times_plot/exercise_hyp_plot
 
 Attempting to track exercise, I assumed the highest 1% of activity is during exercise. Based on the top figure, it is clear there is still "noise" below the activity level ~2500; each "spaghetti" line was meant to distinguish a particular day. 
 
-So I filtered for readings above 2500 (arbitrary, easily adjustable). The bottom panels show scatter plots of activity against time of day where the left is data from the first half of the study, days 1 - 165, and the right is data from the second half of the study, days 165 - 329. I believe the patient likes to exercise during three periods: 11-1pm, 3-6pm or around 8pm. This 3-6pm slot became **much** more popular by the end of the study, as if it became solely dedicated to exercise. The second half plot has much more points, generally higher too, than the first which suggests the patient is exercising more frequently and intensely over time. Among the `r nrow(exercise_df)` instances where the patient had an activity level above 3000, `r round(study_half_props$n[2]/sum(study_half_props$n), 3)*100` % of those instances were in the second half of the study, compared to `r round(study_half_props$n[1]/sum(study_half_props$n), 3)*100` %.
+So I filtered for readings above 2500 (arbitrary, easily adjustable). The bottom panels show scatter plots of activity against time of day where the left is data from the first half of the study, days 1 - 165, and the right is data from the second half of the study, days 165 - 329. I believe the patient likes to exercise during three periods: 11-1pm, 3-6pm or around 8pm. This 3-6pm slot became **much** more popular by the end of the study, as if it became solely dedicated to exercise. The second half plot has much more points, generally higher too, than the first which suggests the patient is exercising more frequently and intensely over time. Among the `r nrow(exercise_df)` instances where the patient had an activity level above 3000, `r round(study_half_counts$n[2]/sum(study_half_counts$n), 3)*100` % of those instances were in the second half of the study, compared to `r round(study_half_counts$n[1]/sum(study_half_counts$n), 3)*100` %.
