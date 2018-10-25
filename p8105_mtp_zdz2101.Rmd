@@ -91,14 +91,15 @@ Plotting total activity by day, as shown on the left, we see an upward trend in 
 
 I discovered 18 days: day_id's `r day_aggregate_df$day_id[which(day_aggregate_df$total_activity == 1440)]` where total activity is "1440" meaning there was no activity over the entirety of those days. I suspect the patient was not wearing the accelerometer or accelerometer malfunction, so I excluded these days from the figures.
 
-```{r Aggregate by hour/"activity profiles"}
+#Aggregate by hour/24 hour profiles
+```{r Aggregate by hour/"activity profiles", fig.height = 16, fig.width = 20}
 hour_aggregate <- accelero_data %>%
   group_by(day_id, week, day, hour) %>%
   summarize(hourly_activity_total = sum(activity_value),
             hourly_activity_mean = mean(activity_value)) %>%
   mutate(sleep = ifelse(hour %in% c(0:6,23), "asleep", "awake"))
 
-ggplot(hour_aggregate, aes(x = as.factor(hour), y = hourly_activity_total, color = sleep)) +
+hourly_profiles <- ggplot(hour_aggregate, aes(x = as.factor(hour), y = hourly_activity_total, color = sleep)) +
   geom_boxplot() + 
   xlab("Hour of the Day") + 
   ylab("Total Activity") +
@@ -107,10 +108,24 @@ ggplot(hour_aggregate, aes(x = as.factor(hour), y = hourly_activity_total, color
         axis.title = element_text(size = 18),
         plot.title = element_text(size = 20, face = "bold"),
         strip.text = element_text(size = 14))
+
+hourly_profiles_by_day <- ggplot(hour_aggregate, aes(x = as.factor(hour), y = hourly_activity_total, color = sleep)) +
+  geom_boxplot() + 
+  xlab("Hour of the Day") + 
+  ylab("Total Activity") +
+  ggtitle("Hour-by-hour profiles by day") +
+  theme(axis.text = element_text(size = 16),
+        axis.title = element_text(size = 18),
+        plot.title = element_text(size = 20, face = "bold"),
+        strip.text = element_text(size = 14)) +
+  facet_wrap(~day, nrow = 2)
+
+hourly_profiles/hourly_profiles_by_day
 ```
 
-It only seemed logical to visualize data by hour to get a sense of when our patient is awake and doing things. Assuming 8 hours of sleep, I made the 8 hours with the lowest median readings a different color to signify "asleep" hours. Our patient is an average joe: starts his day around 7-8am, ramps up his activities which stabilizes from 10am until 8pm, then "winds down" his day and asleep by 11pm. 
+It seems logical to get a sense of when our patient is awake and doing things. Assuming 8 hours of sleep, I made the 8 hours with the lowest median total activity readings a different color to signify "asleep" hours. In general, he starts his day around 7-8am, ramps up activity which stabilizes from 10am until 8pm, then "winds down" his day and probably asleep by 11pm-12am. This routine does not seem to change too much by day of the week either though he has some instances on Friday nights and Sunday afternoons where he is clocking in some high activity. 
 
+#Additional Exploratory Stuff
 ```{r Finding peak times, fig.height = 18, fig.width = 16}
 top_one_percent <- quantile(accelero_data$activity_value, 0.99)
 
@@ -156,6 +171,6 @@ exercise_hyp_plot <- ggplot(exercise_df, aes(x = minute, y = activity_value, col
 peak_times_plot/exercise_hyp_plot
 ```
 
-Attempting to track exercise, I assumed the highest 1% of activity is during exercise. Based on the top figure, it is clear there is still "noise" below the activity level ~2500; each "spaghetti" line was meant to distinguish a particular day. 
+Attempting to track exercise, I assumed the highest 1% of activity is during exercise. It was clear from the top figure there was still "noise" below the activity value ~2500; each "spaghetti" line was meant to distinguish a particular day. So I filtered for readings above 2500 (arbitrary, easily adjustable). The bottom panels show scatter plots of activity against time of day where the left is data from the first half of the study, days 1 - 165, and the right is data from the second half of the study, days 165 - 329. 
 
-So I filtered for readings above 2500 (arbitrary, easily adjustable). The bottom panels show scatter plots of activity against time of day where the left is data from the first half of the study, days 1 - 165, and the right is data from the second half of the study, days 165 - 329. I believe the patient likes to exercise during three periods: 11-1pm, 3-6pm or around 8pm. This 3-6pm slot became **much** more popular by the end of the study, as if it became solely dedicated to exercise. The second half plot has much more points, generally higher too, than the first which suggests the patient is exercising more frequently and intensely over time. Among the `r nrow(exercise_df)` instances where the patient had an activity level above 3000, `r round(study_half_counts$n[2]/sum(study_half_counts$n), 3)*100` % of those instances were in the second half of the study, compared to `r round(study_half_counts$n[1]/sum(study_half_counts$n), 3)*100` %.
+I suspect the patient likes to exercise during three periods: 11-1pm, 3-6pm or around 8pm, the 3-6pm slot becoming **much** more popular as time passed. The second half plot has much more points, generally higher too, than the first which may suggest the patient is exercising more frequently and intensely over time.
