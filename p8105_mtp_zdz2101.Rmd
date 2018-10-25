@@ -25,23 +25,21 @@ accelero_data <- read_csv("data/p8105_mtp_data.csv") %>%
   select(day_id, week, day, hour, activity, minute, activity_value) %>%
   arrange(week,day)
 
-sample_n(accelero_data, 10)  #show that day_id is works
-
-#I cleverly used a linear transform of week and a numeric version of day to attain day_id
+sample_n(accelero_data, 10)
 ```
 
-The final dataset I have attained has `r nrow(accelero_data)` observations and `r ncol(accelero_data)` variables. The number of observations was as expected as there are 60 minutes in an hour, 24 hours a day, 7 days a week, and 47 weeks worth of accelerometer readings, in which case the product of these 4 numbers gets you `r nrow(accelero_data)`. My variables are as follows: 
+This dataset has `r nrow(accelero_data)` observations and `r ncol(accelero_data)` variables. The number of observations is expected as there is 1 reading/minute, 60 minutes/hour, 24 hours/day, 7 days/week, and 47 weeks worth of accelerometer readings (product of these 4 numbers gets you `r nrow(accelero_data)`). Variables are: 
 
-1) **day_id**: Identifies the day of the study with the assumption that sunday is the beginning of a week, so week 1 sunday is day 1, week 2 sunday is day 8, etc. 
-2) **week**: Identifies what week of the study this patient was wearing the accelerometer
-3) **day**: Identifies what weekday it is, which I recoded to as a factor
-4) **hour**: Identifies what hour of the day it is (24 hour/military time)
-5) **activity**: A column of essentially the column names of the original file, this was my "key" for when using the gather function, I left it as is to "preserve the original observations"
-6) **minute**: Identifies minute of day 1 being 12:00 - 12:01 AM,  1440 being 11:59 PM - 12:00 AM
-7) **activity_value**: The accelerometer activity reading for a particular moment in time
+1) **day_id**: day of study, assuming week starts on sunday
+2) **week**: week of study 
+3) **day**: weekday, recoded to factor
+4) **hour**: hour of day (military time)
+5) **activity**: essentially is the column names of the original file, used as "key" for the gather function, left here to "preserve original observations"
+6) **minute**:  minute of day
+7) **activity_value**: accelerometer activity reading
 
 #Aggregate data by day and discover some trends
-```{r Aggregate by day, fig.height = 16, fig.width = 20, message = FALSE}
+```{r Day Aggregate, fig.height = 16, fig.width = 20, message = FALSE}
 day_aggregate_df <- accelero_data %>%
   group_by(day_id, week, day) %>%
   summarize(total_activity = sum(activity_value),
@@ -53,16 +51,15 @@ day_aggregate_df <- accelero_data %>%
             max = quantile(activity_value, 1)
             )
   
-
 day_aggregate_plot <- day_aggregate_df %>%
-  filter(total_activity != 1440) %>% #----------get rid of days with presumably invalid readings
+  filter(total_activity != 1440) %>% #---------remove days w/ invalid readings
   ggplot(., aes(x = day_id, y = total_activity)) + 
   geom_point(aes(color = day), alpha = 0.5) + 
   geom_smooth() +
   ylab("Total Activity") +
   xlab("Day of Study") + 
   theme(legend.position = "bottom") +
-  ggtitle("Total activity measure by each day of study") + 
+  ggtitle("Total activity of each day") + 
   theme(axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
         plot.title = element_text(size = 20, face = "bold"),
@@ -77,7 +74,7 @@ by_day_plot <- day_aggregate_df %>%
   ylab("Total Activity") +
   xlab("Day of Study") + 
   theme(legend.position = "none") +
-  ggtitle("Total activity measure by weekday") +
+  ggtitle("Total activity measure by weekdays") +
   theme(axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
         plot.title = element_text(size = 20, face = "bold"),
@@ -87,9 +84,9 @@ by_day_plot <- day_aggregate_df %>%
 day_aggregate_plot + by_day_plot
 ```
 
-Using the sum of the 1440 readings on a given day (our Total Activity measure), as shown by the figure on the left, it is clear there is an upward trend in activity throughout the course of the study. It looks like there was an ever so slight dip ~day 150, about week 21-22, but the trend over the course of the 47 weeks is still that of which is overall increasing. Based on the figure on the right, weekday does not seem to play any big role in this finding as the patient's activity seemed to still increase over time regardless of what day it was. Though it could be argued the patient's activity on Thursdays looks a little stagnant. 
+Plotting total activity by day, as shown on the left, we see an upward trend in activity throughout the course of the study. It dips around day 150, but the trend overall throughout 47 weeks is still positive. Based on the figure on the right, the patient's activity still increases over time regardless of what day it is signifying weekday does not play a role in our findings. It could be argued the patient's activity on Thursdays looks stagnant. 
 
-It is interesting to note during the exploratory phase of this, I discovered 18 days: day_id's `r day_aggregate_df$day_id[which(day_aggregate_df$total_activity == 1440)]` where the total activity measure read "1440" which meant that there was no activity over the course of an entire day. I removed these days from the figures as it probably meant the patient was not wearing/using the accelerometer for that day or the accelerometer malfunctioned somehow. I suspect this is true for a few more days but establishing a particular cutoff seems difficult.
+I discovered 18 days: day_id's `r day_aggregate_df$day_id[which(day_aggregate_df$total_activity == 1440)]` where total activity is "1440" meaning there was no activity over the entirety of those days. I suspect the patient was not wearing the accelerometer or accelerometer malfunction, so I excluded these days from the figures.
 
 ```{r Aggregate by hour/"activity profiles"}
 hour_aggregate <- accelero_data %>%
@@ -102,14 +99,14 @@ ggplot(hour_aggregate, aes(x = as.factor(hour), y = hourly_activity_total, color
   geom_boxplot() + 
   xlab("Hour of the Day") + 
   ylab("Total Activity") +
-  ggtitle("Boxplot of total activity based on hour-by-hour profiles") +
+  ggtitle("Total activity based on hour-by-hour profiles") +
   theme(axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
         plot.title = element_text(size = 20, face = "bold"),
         strip.text = element_text(size = 14))
 ```
 
-Given this datazet, it only seemed logical to visualize the data by hours of the day to get an idea of when our patient is actually awake and doing things. Based on this figure and an assumption that an adult sleeps 8 hours a day, I colored the boxplots with the 8 lowest medians a different color to signify "sleep" hours. It seems our patient here is a relatively normal adult: gets his day started around 7-8am, ramps up his activities which stabilizes from about 10am until 8pm or so, then begins to "wind down" his day and is asleep by 11pm. 
+It only seemed logical to visualize data by hour to get a sense of when our patient is awake and doing things. Assuming 8 hours of sleep, I made the 8 hours with the lowest median readings a different color to signify "asleep" hours. Our patient is an average joe: starts his day around 7-8am, ramps up his activities which stabilizes from 10am until 8pm, then "winds down" his day and asleep by 11pm. 
 
 ```{r Finding peak times, fig.height = 18, fig.width = 16}
 top_one_percent <- quantile(accelero_data$activity_value, 0.99)
@@ -123,18 +120,18 @@ peaks_df<- accelero_data %>%
 peak_times_plot <- ggplot(peaks_df, aes(x = minute, y = activity_value, color = as.factor(day_id))) +
   geom_line() + 
   scale_x_continuous(breaks = seq(1,1440,60), labels = 0:23) + 
-  xlab("Hour of the Day") +
+  xlab("Hour of Day") +
   ylab("Activity Value") +
   ggtitle("Spaghetti plot of Top 1% of Accelerometer Readings") +
   theme(axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
         plot.title = element_text(size = 20, face = "bold"),
         strip.text = element_text(size = 14)) +
-  geom_hline(yintercept =  3000, color = "black", linetype = "dashed") +
+  geom_hline(yintercept =  2500, color = "black", linetype = "dashed") +
   theme(legend.position="none")
 
 exercise_df <- peaks_df %>%
-  filter(activity_value > 3000) %>%
+  filter(activity_value > 2500) %>%
   mutate(study = ifelse(day_id > 165, "Second Half", "First Half"))
 
 study_half_props <- exercise_df %>%
@@ -156,6 +153,6 @@ exercise_hyp_plot <- ggplot(exercise_df, aes(x = minute, y = activity_value, col
 peak_times_plot/exercise_hyp_plot
 ```
 
-In an attempt to track exercise, I took the assumption that the highest 1% of activity occurs during the patient's exercise time. Based on the top figure where each "spaghetti" line was meant to distinguish a particular day, it is clear there was a lot of "noise" below the activity level ~3000 (1% surely was not conservative enough). 
+Attempting to track exercise, I assumed the highest 1% of activity is during exercise. Based on the top figure, it is clear there is still "noise" below the activity level ~2500; each "spaghetti" line was meant to distinguish a particular day. 
 
-I tried something else where I filtered for readings above 3000, an arugment can be made to increase or decrease this seemingly arbitrary cutoff. As a result I rendered the bottom figure, a scatter plot of activity values against time of day where the left panel is data from the first half of the study (days 1 - 165), and the right panel is data from the second half of the study (days 165 - 329). Based on this plot, I suspect the patient likes to work out during three time zones: 11am - 1pm, 3pm - 6pm or around 8pm. This 3pm - 6pm slot became **much** more popular by the end of the study, if not an additional time dedicated to exercise. It even seems based on the sheer number of points in the second half compared to the first half, the patient seems to just be exercising more and pushing himself harder to higher levels of activity. Among the `r nrow(exercise_df)` instances where the patient had an activity level above 3000, `r round(study_half_props$n[2]/sum(study_half_props$n), 3)*100` % of those instances were in the second half of the study, compared to `r round(study_half_props$n[1]/sum(study_half_props$n), 3)*100` %.
+So I filtered for readings above 2500 (arbitrary, easily adjustable). The bottom panels show scatter plots of activity against time of day where the left is data from the first half of the study, days 1 - 165, and the right is data from the second half of the study, days 165 - 329. I believe the patient likes to exercise during three periods: 11-1pm, 3-6pm or around 8pm. This 3-6pm slot became **much** more popular by the end of the study, as if it became solely dedicated to exercise. The second half plot has much more points, generally higher too, than the first which suggests the patient is exercising more frequently and intensely over time. Among the `r nrow(exercise_df)` instances where the patient had an activity level above 3000, `r round(study_half_props$n[2]/sum(study_half_props$n), 3)*100` % of those instances were in the second half of the study, compared to `r round(study_half_props$n[1]/sum(study_half_props$n), 3)*100` %.
