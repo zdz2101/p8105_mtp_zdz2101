@@ -5,7 +5,7 @@ date: "10/22/2018"
 output: github_document
 ---
 
-##Load packages
+##Load Packages
 ```{r Load Libraries, messages = FALSE}
 library(tidyverse)
 library(readr)
@@ -14,7 +14,7 @@ library(patchwork)
 wordcountaddin::text_stats("p8105_mtp_zdz2101.Rmd")
 ```
 
-##Read data/tidying
+##Read Data/Tidying
 ```{r Reading in data and tidying, message = FALSE}
 accelero_data <- read_csv("data/p8105_mtp_data.csv") %>%
   gather(., key = "activity", value = "activity_value", 3:1442) %>%
